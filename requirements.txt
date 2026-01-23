@@ -1,0 +1,5 @@
+# Trading Journal Requirements
+# Python 3.7+ with tkinter (usually included with Python)
+
+# MongoDB driver
+pymongo>=4.0.0
