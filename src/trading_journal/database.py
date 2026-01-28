@@ -1,10 +1,21 @@
 """
 Database service for MongoDB integration
 """
+import os
+from pathlib import Path
 from typing import List, Optional
 from datetime import datetime
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+
+try:
+    from dotenv import load_dotenv
+    # Load .env file from project root (go up 2 levels: trading_journal -> src -> root)
+    env_path = Path(__file__).parent.parent.parent / '.env'
+    load_dotenv(env_path)
+except ImportError:
+    # python-dotenv not installed, skip loading .env file
+    pass
 
 from .models import Trade
 
@@ -12,15 +23,27 @@ from .models import Trade
 class DatabaseService:
     """Service for MongoDB database operations"""
     
-    def __init__(self, connection_string: str = "mongodb://localhost:27017/", 
-                 database_name: str = "trading_journal"):
+    def __init__(self, connection_string: Optional[str] = None, 
+                 database_name: Optional[str] = None):
         """
         Initialize database service
         
         Args:
-            connection_string: MongoDB connection string (default: localhost:27017)
-            database_name: Database name
+            connection_string: MongoDB connection string. If None, checks:
+                1. MONGODB_URI from .env file or environment variable
+                2. Defaults to mongodb://localhost:27017/
+            database_name: Database name. If None, checks:
+                1. MONGODB_DATABASE from .env file or environment variable
+                2. Defaults to trading_journal
         """
+        if connection_string is None:
+            # Check .env file (loaded via dotenv) or environment variable, then default to localhost
+            connection_string = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
+        
+        if database_name is None:
+            # Check .env file or environment variable, then default
+            database_name = os.getenv("MONGODB_DATABASE", "trading_journal")
+        
         self.connection_string = connection_string
         self.database_name = database_name
         self.client = None
@@ -29,18 +52,48 @@ class DatabaseService:
         self.summaries_collection = None
         self._connect()
     
+    def reconnect(self, connection_string: str) -> bool:
+        """
+        Reconnect to MongoDB with a new connection string
+        
+        Args:
+            connection_string: New MongoDB connection string
+            
+        Returns:
+            True if connection successful, False otherwise
+        """
+        # Close existing connection
+        self.close()
+        
+        # Update connection string
+        self.connection_string = connection_string
+        
+        # Try to connect
+        self._connect()
+        return self.is_connected()
+    
     def _connect(self):
         """Connect to MongoDB"""
         try:
-            self.client = MongoClient(self.connection_string, serverSelectionTimeoutMS=2000)
+            # Increase timeout for Atlas connections
+            timeout_ms = 10000 if "mongodb+srv://" in self.connection_string else 2000
+            self.client = MongoClient(self.connection_string, serverSelectionTimeoutMS=timeout_ms)
             # Test connection
             self.client.server_info()
             self.db = self.client[self.database_name]
             self.trades_collection = self.db["trades"]
             self.summaries_collection = self.db["summaries"]
-            print("Connected to MongoDB successfully")
+            print(f"Connected to MongoDB successfully: {self.connection_string[:50]}...")
         except (ConnectionFailure, ServerSelectionTimeoutError) as e:
             print(f"Warning: Could not connect to MongoDB: {e}")
+            print(f"Connection string: {self.connection_string[:50]}...")
+            print("Running in offline mode - data will not be persisted")
+            self.client = None
+            self.db = None
+            self.trades_collection = None
+            self.summaries_collection = None
+        except Exception as e:
+            print(f"Error connecting to MongoDB: {e}")
             print("Running in offline mode - data will not be persisted")
             self.client = None
             self.db = None

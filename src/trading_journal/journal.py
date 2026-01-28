@@ -107,6 +107,21 @@ class TradingJournal:
         ttk.Label(top_frame, text="0.1", font=("Arial", 9, "bold")).grid(row=0, column=6, padx=(PAD_R, 6), pady=3)
         
         ttk.Label(top_frame, text="1 Lot = 100 oz").grid(row=0, column=7, padx=6, pady=3)
+        
+        # Row 2: MongoDB Connection String
+        ttk.Label(top_frame, text="MongoDB URI:").grid(row=1, column=0, padx=(6, PAD_L), pady=3, sticky=tk.W)
+        self.mongodb_uri_var = tk.StringVar(value=self.db.connection_string if self.db.connection_string else "")
+        mongodb_entry = ttk.Entry(top_frame, textvariable=self.mongodb_uri_var, width=50)
+        mongodb_entry.grid(row=1, column=1, columnspan=5, padx=(PAD_R, 4), pady=3, sticky=(tk.W, tk.E))
+        top_frame.columnconfigure(1, weight=1)
+        
+        connect_btn = ttk.Button(top_frame, text="Connect", command=self.reconnect_database)
+        connect_btn.grid(row=1, column=6, padx=4, pady=3)
+        
+        # Connection status indicator
+        self.db_status_label = ttk.Label(top_frame, text="●", font=("Arial", 12))
+        self.db_status_label.grid(row=1, column=7, padx=6, pady=3)
+        self.update_db_status_indicator()
     
     def _setup_trade_entry_frame(self, parent):
         """Setup trade entry frame — columns evenly distributed across full width"""
@@ -235,6 +250,36 @@ class TradingJournal:
         except ValueError:
             pass
     
+    def reconnect_database(self):
+        """Reconnect to MongoDB with new connection string"""
+        connection_string = self.mongodb_uri_var.get().strip()
+        if not connection_string:
+            messagebox.showwarning("Warning", "Please enter a MongoDB connection string")
+            return
+        
+        # Try to reconnect
+        if self.db.reconnect(connection_string):
+            messagebox.showinfo("Success", "Connected to MongoDB successfully!")
+            # Reload trades from new database
+            self.trades = self.db.load_trades()
+            # Recalculate account balance
+            initial_balance = 10000.0
+            self.account_balance = initial_balance + sum(t.usd_pl for t in self.trades)
+            self.account_balance_var.set(str(round(self.account_balance, 2)))
+            # Update table
+            self.update_table()
+        else:
+            messagebox.showerror("Error", "Failed to connect to MongoDB. Check your connection string.")
+        
+        self.update_db_status_indicator()
+    
+    def update_db_status_indicator(self):
+        """Update database connection status indicator"""
+        if self.db.is_connected():
+            self.db_status_label.config(text="●", foreground="green")
+        else:
+            self.db_status_label.config(text="●", foreground="red")
+    
     def add_strategy(self):
         """Add a new strategy"""
         strategy_name = simpledialog.askstring("Add Strategy", "Enter strategy name:")
@@ -353,6 +398,7 @@ class TradingJournal:
                 self.db.save_trade(trade)
             
             self.update_table()
+            self.update_db_status_indicator()
             self.clear_inputs()
             
         except ValueError:
@@ -564,6 +610,7 @@ Average USD/Trade:     ${avg_usd:+.2f}
             # Delete from list
             del self.trades[index]
             self.update_table()
+            self.update_db_status_indicator()
     
     def on_closing(self):
         """Handle window close event"""

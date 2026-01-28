@@ -22,6 +22,22 @@ cd trading_journal
 pip install -r requirements.txt
 ```
 
+### Configuration
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit `.env` and add your MongoDB Atlas credentials:
+   ```
+   MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.h7mvlta.mongodb.net/?appName=Cluster0
+   ```
+
+   Replace `<username>` and `<password>` with your actual MongoDB Atlas credentials.
+
+3. The `.env` file is ignored by git and will not be committed.
+
 ### Run
 
 ```bash
@@ -53,10 +69,17 @@ Example: 2000.50 1.0 1995.00 2.0 TP
 
 ## MongoDB
 
-- **Connection**: `mongodb://localhost:27017/`
-- **Database**: `trading_journal`
+- **Configuration**: Connection string loaded from `.env` file (recommended) or environment variable
+- **Default Connection**: `mongodb://localhost:27017/` (if no .env file or MONGODB_URI set)
+- **MongoDB Atlas**: Configure in `.env` file or enter connection string in UI
+- **Database**: `trading_journal` (configurable via `MONGODB_DATABASE` in .env)
 - **Collections**: `trades`, `summaries`
+- **Connection String Format**:
+  - Local: `mongodb://localhost:27017/`
+  - Atlas: `mongodb+srv://username:password@cluster0.h7mvlta.mongodb.net/?appName=Cluster0`
 - Trades auto-save on add, auto-load on startup
+- Connection status indicator (green ● = connected, red ● = disconnected)
+- **UI Connection**: You can also change connection string via the "MongoDB URI" field in Settings and click "Connect"
 
 ## Requirements
 
