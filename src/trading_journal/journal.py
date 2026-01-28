@@ -31,7 +31,9 @@ class TradingJournal:
         if not self.strategies:
             self.strategies = ["Strategy 1"]
         
-        self.account_balance = 10000.0
+        # Account balance: start at 10000, then add/subtract each trade's P/L so it stays current
+        initial_balance = 10000.0
+        self.account_balance = initial_balance + sum(t.usd_pl for t in self.trades)
         
         # Initialize calculator
         self.calculator = TradeCalculator(pip_value=0.1, pip_value_usd=1.0)
@@ -78,114 +80,139 @@ class TradingJournal:
         
         # Delete button
         delete_button = ttk.Button(main_frame, text="Delete Selected Trade", command=self.delete_trade)
-        delete_button.grid(row=5, column=0, columnspan=2, pady=10)
+        delete_button.grid(row=5, column=0, columnspan=2, pady=6)
     
     def _setup_strategy_frame(self, parent):
         """Setup strategy and settings frame"""
-        top_frame = ttk.LabelFrame(parent, text="Strategy & Settings", padding="10")
-        top_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        top_frame = ttk.LabelFrame(parent, text="Strategy & Settings", padding=(8, 6))
+        top_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 6))
+        PAD_L, PAD_R = 2, 4  # tight spacing between label and field
         
-        ttk.Label(top_frame, text="Strategy:").grid(row=0, column=0, padx=5)
+        ttk.Label(top_frame, text="Strategy:").grid(row=0, column=0, padx=(6, PAD_L), pady=3, sticky=tk.W)
         self.strategy_var = tk.StringVar(value=self.strategies[0])
         self.strategy_combo = ttk.Combobox(top_frame, textvariable=self.strategy_var,
-                                          values=self.strategies, width=20, state="readonly")
-        self.strategy_combo.grid(row=0, column=1, padx=5)
+                                          values=self.strategies, width=18, state="readonly")
+        self.strategy_combo.grid(row=0, column=1, padx=(PAD_R, 6), pady=3)
         self.strategy_combo.bind('<<ComboboxSelected>>', self.on_strategy_change)
         
         add_strategy_btn = ttk.Button(top_frame, text="Add Strategy", command=self.add_strategy)
-        add_strategy_btn.grid(row=0, column=2, padx=5)
+        add_strategy_btn.grid(row=0, column=2, padx=4, pady=3)
         
-        ttk.Label(top_frame, text="Account Balance:").grid(row=0, column=3, padx=5)
-        self.account_balance_var = tk.StringVar(value="10000")
-        ttk.Entry(top_frame, textvariable=self.account_balance_var, width=15).grid(row=0, column=4, padx=5)
+        ttk.Label(top_frame, text="Account Balance:").grid(row=0, column=3, padx=(6, PAD_L), pady=3, sticky=tk.W)
+        self.account_balance_var = tk.StringVar(value=str(round(self.account_balance, 2)))
+        ttk.Entry(top_frame, textvariable=self.account_balance_var, width=12).grid(row=0, column=4, padx=(PAD_R, 6), pady=3)
         self.account_balance_var.trace('w', self.update_account_balance)
         
-        ttk.Label(top_frame, text="Pip Value:").grid(row=0, column=5, padx=5)
-        ttk.Label(top_frame, text="0.1", font=("Arial", 9, "bold")).grid(row=0, column=6, padx=5)
+        ttk.Label(top_frame, text="Pip Value:").grid(row=0, column=5, padx=(6, PAD_L), pady=3, sticky=tk.W)
+        ttk.Label(top_frame, text="0.1", font=("Arial", 9, "bold")).grid(row=0, column=6, padx=(PAD_R, 6), pady=3)
         
-        ttk.Label(top_frame, text="1 Lot = 100 oz").grid(row=0, column=7, padx=5)
+        ttk.Label(top_frame, text="1 Lot = 100 oz").grid(row=0, column=7, padx=6, pady=3)
     
     def _setup_trade_entry_frame(self, parent):
-        """Setup trade entry frame"""
-        input_frame = ttk.LabelFrame(parent, text="Add Trade Entry", padding="10")
-        input_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        """Setup trade entry frame — columns evenly distributed across full width"""
+        input_frame = ttk.LabelFrame(parent, text="Add Trade Entry", padding=(8, 6))
+        input_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 6))
+        input_frame.columnconfigure(0, weight=1)
+        input_frame.columnconfigure(1, weight=1)
+        input_frame.columnconfigure(2, weight=1)
         input_frame.columnconfigure(3, weight=1)
+        input_frame.columnconfigure(4, weight=1)
+        input_frame.columnconfigure(5, weight=1)
+        input_frame.columnconfigure(6, weight=1)
+        input_frame.columnconfigure(7, weight=1)
+        pad = (3, 3)
+        st = (tk.W, tk.E)
         
-        # Row 1: Entry, Risk %, Stop Loss, Multiplier
-        ttk.Label(input_frame, text="Entry Price:").grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
+        # Row 1: Entry, Risk %, Stop Loss, Multiplier (each pair = 2 equal columns)
+        ttk.Label(input_frame, text="Entry:").grid(row=0, column=0, padx=pad, pady=2, sticky=st)
         self.entry_price_var = tk.StringVar()
-        ttk.Entry(input_frame, textvariable=self.entry_price_var, width=15).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Entry(input_frame, textvariable=self.entry_price_var).grid(row=0, column=1, padx=pad, pady=2, sticky=st)
         
-        ttk.Label(input_frame, text="Risk %:").grid(row=0, column=2, padx=5, pady=5, sticky=tk.W)
-        self.risk_percent_var = tk.StringVar()
-        ttk.Entry(input_frame, textvariable=self.risk_percent_var, width=15).grid(row=0, column=3, padx=5, pady=5)
+        ttk.Label(input_frame, text="Risk %:").grid(row=0, column=2, padx=pad, pady=2, sticky=st)
+        self.risk_percent_var = tk.StringVar(value="6")
+        ttk.Entry(input_frame, textvariable=self.risk_percent_var).grid(row=0, column=3, padx=pad, pady=2, sticky=st)
         
-        ttk.Label(input_frame, text="Stop Loss:").grid(row=0, column=4, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(input_frame, text="Stop Loss:").grid(row=0, column=4, padx=pad, pady=2, sticky=st)
         self.stop_loss_var = tk.StringVar()
-        ttk.Entry(input_frame, textvariable=self.stop_loss_var, width=15).grid(row=0, column=5, padx=5, pady=5)
+        ttk.Entry(input_frame, textvariable=self.stop_loss_var).grid(row=0, column=5, padx=pad, pady=2, sticky=st)
         
-        ttk.Label(input_frame, text="Reward Multiplier:").grid(row=0, column=6, padx=5, pady=5, sticky=tk.W)
-        self.multiplier_var = tk.StringVar(value="2.0")
-        ttk.Entry(input_frame, textvariable=self.multiplier_var, width=15).grid(row=0, column=7, padx=5, pady=5)
+        ttk.Label(input_frame, text="Multiplier:").grid(row=0, column=6, padx=pad, pady=2, sticky=st)
+        self.multiplier_var = tk.StringVar(value="1")
+        ttk.Entry(input_frame, textvariable=self.multiplier_var).grid(row=0, column=7, padx=pad, pady=2, sticky=st)
         
-        # Row 2: Calculated values and Exit Reason
-        ttk.Label(input_frame, text="Take Profit (Calculated):").grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+        # Row 2: TP, Lot Size, Risk Amount, Exit
+        ttk.Label(input_frame, text="TP:").grid(row=1, column=0, padx=pad, pady=2, sticky=st)
         self.take_profit_label = ttk.Label(input_frame, text="--", font=("Arial", 9, "bold"), foreground="blue")
-        self.take_profit_label.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+        self.take_profit_label.grid(row=1, column=1, padx=pad, pady=2, sticky=st)
         
-        ttk.Label(input_frame, text="Lot Size (Calculated):").grid(row=1, column=2, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(input_frame, text="Lot Size:").grid(row=1, column=2, padx=pad, pady=2, sticky=st)
         self.lot_size_label = ttk.Label(input_frame, text="--", font=("Arial", 9, "bold"), foreground="blue")
-        self.lot_size_label.grid(row=1, column=3, padx=5, pady=5, sticky=tk.W)
+        self.lot_size_label.grid(row=1, column=3, padx=pad, pady=2, sticky=st)
         
-        ttk.Label(input_frame, text="Amount at Risk:").grid(row=1, column=4, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(input_frame, text="Risk Amount:").grid(row=1, column=4, padx=pad, pady=2, sticky=st)
         self.amount_at_risk_label = ttk.Label(input_frame, text="--", font=("Arial", 9, "bold"), foreground="red")
-        self.amount_at_risk_label.grid(row=1, column=5, padx=5, pady=5, sticky=tk.W)
+        self.amount_at_risk_label.grid(row=1, column=5, padx=pad, pady=2, sticky=st)
         
-        ttk.Label(input_frame, text="Exit Reason:").grid(row=1, column=6, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(input_frame, text="Exit:").grid(row=1, column=6, padx=pad, pady=2, sticky=st)
         self.exit_reason_var = tk.StringVar(value="TP")
         exit_reason_combo = ttk.Combobox(input_frame, textvariable=self.exit_reason_var,
-                                        values=["TP", "SL"], width=12, state="readonly")
-        exit_reason_combo.grid(row=1, column=7, padx=5, pady=5)
+                                        values=["TP", "SL"], state="readonly")
+        exit_reason_combo.grid(row=1, column=7, padx=pad, pady=2, sticky=st)
         
-        # Buttons
-        calc_btn = ttk.Button(input_frame, text="Calculate TP & Lot Size", command=self.calculate_trade_values)
-        calc_btn.grid(row=2, column=0, columnspan=4, padx=5, pady=10)
+        # Row 3: Scenario (2 cols), Comment (6 cols) — same total 8 columns
+        ttk.Label(input_frame, text="Scenario:").grid(row=2, column=0, padx=pad, pady=2, sticky=st)
+        self.scenario_var = tk.StringVar(value="Strong")
+        scenario_combo = ttk.Combobox(input_frame, textvariable=self.scenario_var,
+                                     values=["Low", "Medium", "Strong"], state="readonly")
+        scenario_combo.grid(row=2, column=1, padx=pad, pady=2, sticky=st)
         
-        add_button = ttk.Button(input_frame, text="Add Trade", command=self.add_trade)
-        add_button.grid(row=2, column=4, columnspan=4, padx=5, pady=10)
+        ttk.Label(input_frame, text="Comment:").grid(row=2, column=2, padx=pad, pady=2, sticky=st)
+        self.comment_var = tk.StringVar()
+        comment_entry = ttk.Entry(input_frame, textvariable=self.comment_var)
+        comment_entry.grid(row=2, column=3, columnspan=5, padx=pad, pady=2, sticky=st)
+        
+        # Row 4: Buttons — each spanning 4 columns, centred in their half
+        btn_frame = ttk.Frame(input_frame)
+        btn_frame.grid(row=3, column=0, columnspan=8, sticky=st, pady=4)
+        btn_frame.columnconfigure(0, weight=1)
+        btn_frame.columnconfigure(1, weight=1)
+        calc_btn = ttk.Button(btn_frame, text="Calculate TP & Lot Size", command=self.calculate_trade_values)
+        calc_btn.grid(row=0, column=0, padx=4)
+        add_btn = ttk.Button(btn_frame, text="Add Trade", command=self.add_trade)
+        add_btn.grid(row=0, column=1, padx=4)
     
     def _setup_quick_input_frame(self, parent):
         """Setup quick input frame"""
-        quick_input_frame = ttk.LabelFrame(parent, text="Quick Input (Entry Risk% StopLoss Multiplier ExitReason)", padding="10")
-        quick_input_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        quick_input_frame = ttk.LabelFrame(parent, text="Quick Input (Entry Risk% StopLoss Multiplier ExitReason)", padding=(8, 6))
+        quick_input_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 6))
         quick_input_frame.columnconfigure(0, weight=1)
         
         self.quick_input_var = tk.StringVar()
         quick_entry = ttk.Entry(quick_input_frame, textvariable=self.quick_input_var, width=80)
-        quick_entry.grid(row=0, column=0, padx=5, pady=5, sticky=(tk.W, tk.E))
+        quick_entry.grid(row=0, column=0, padx=(6, 4), pady=3, sticky=(tk.W, tk.E))
         quick_entry.bind('<Return>', lambda e: self.process_quick_input())
         
         quick_add_button = ttk.Button(quick_input_frame, text="Add", command=self.process_quick_input)
-        quick_add_button.grid(row=0, column=1, padx=5, pady=5)
+        quick_add_button.grid(row=0, column=1, padx=4, pady=3)
         
         ttk.Label(quick_input_frame, text="Example: 2000.50 1.0 1995.00 2.0 TP",
-                 font=("Arial", 8), foreground="gray").grid(row=1, column=0, columnspan=2, pady=2, sticky=tk.W)
+                 font=("Arial", 8), foreground="gray").grid(row=1, column=0, columnspan=2, pady=1, sticky=tk.W)
     
     def _setup_table_frame(self, parent):
         """Setup table frame"""
         table_frame = ttk.Frame(parent)
-        table_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        table_frame.grid(row=3, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 6))
         table_frame.columnconfigure(0, weight=1)
         table_frame.rowconfigure(0, weight=1)
         parent.rowconfigure(3, weight=1)
         
-        columns = ("Date", "Strategy", "Entry", "TP", "SL", "Multiplier", "Lot Size", "Risk %", "Risk Amount",
-                  "Exit Reason", "Pips", "USD P/L", "Status", "Return Ratio")
+        columns = ("Date", "Strategy", "Scenario", "Entry", "TP", "SL", "Multiplier", "Lot Size", "Risk %", "Risk Amount",
+                  "Exit Reason", "Pips", "USD P/L", "Status", "Return Ratio", "Comment")
         
         column_widths = {
-            "Date": 120, "Strategy": 100, "Entry": 100, "TP": 100, "SL": 100,
-            "Multiplier": 80, "Lot Size": 80, "Risk %": 70, "Risk Amount": 100,
-            "Exit Reason": 80, "Pips": 80, "USD P/L": 100, "Status": 80, "Return Ratio": 100
+            "Date": 120, "Strategy": 90, "Scenario": 70, "Entry": 80, "TP": 80, "SL": 80,
+            "Multiplier": 70, "Lot Size": 70, "Risk %": 55, "Risk Amount": 85,
+            "Exit Reason": 65, "Pips": 60, "USD P/L": 85, "Status": 60, "Return Ratio": 85, "Comment": 180
         }
         
         from .ui.components import create_table_frame
@@ -194,11 +221,11 @@ class TradingJournal:
     
     def _setup_summary_frame(self, parent):
         """Setup summary frame"""
-        summary_frame = ttk.LabelFrame(parent, text="Summary", padding="10")
+        summary_frame = ttk.LabelFrame(parent, text="Summary", padding=(8, 6))
         summary_frame.grid(row=4, column=0, columnspan=2, sticky=(tk.W, tk.E))
         
         self.summary_text = tk.Text(summary_frame, height=15, wrap=tk.WORD, font=("Courier", 9))
-        self.summary_text.grid(row=0, column=0, sticky=(tk.W, tk.E))
+        self.summary_text.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=2, pady=2)
         summary_frame.columnconfigure(0, weight=1)
     
     def update_account_balance(self, *args):
@@ -269,6 +296,8 @@ class TradingJournal:
             multiplier = float(self.multiplier_var.get())
             exit_reason = self.exit_reason_var.get()
             strategy = self.strategy_var.get()
+            scenario = self.scenario_var.get()
+            comment = (self.comment_var.get() or "").strip()
             
             take_profit = self.calculated_tp
             lot_size = self.calculated_lot_size
@@ -308,10 +337,16 @@ class TradingJournal:
                 usd_pl=usd_pl,
                 status=status,
                 return_ratio=return_ratio,
-                achieved_multiplier=achieved_multiplier
+                achieved_multiplier=achieved_multiplier,
+                scenario=scenario,
+                comment=comment,
             )
             
             self.trades.append(trade)
+            
+            # Update account balance: add profit or subtract loss
+            self.account_balance += trade.usd_pl
+            self.account_balance_var.set(str(round(self.account_balance, 2)))
             
             # Save to database
             if self.db.is_connected():
@@ -376,9 +411,12 @@ class TradingJournal:
         
         # Add all trades
         for trade in self.trades:
+            scenario = getattr(trade, "scenario", "Strong")
+            comment = getattr(trade, "comment", "") or ""
             self.tree.insert("", tk.END, values=(
                 trade.date,
                 trade.strategy,
+                scenario,
                 f"{trade.entry:.2f}",
                 f"{trade.tp:.2f}",
                 f"{trade.sl:.2f}",
@@ -390,7 +428,8 @@ class TradingJournal:
                 f"{trade.pips:.2f}",
                 f"${trade.usd_pl:.2f}",
                 trade.status,
-                f"{trade.return_ratio:.2f}x"
+                f"{trade.return_ratio:.2f}x",
+                (comment[:40] + "…") if len(comment) > 40 else comment,
             ))
         
         # Update summary
@@ -489,10 +528,12 @@ Average USD/Trade:     ${avg_usd:+.2f}
     def clear_inputs(self):
         """Clear input fields"""
         self.entry_price_var.set("")
-        self.risk_percent_var.set("")
+        self.risk_percent_var.set("6")
         self.stop_loss_var.set("")
-        self.multiplier_var.set("2.0")
+        self.multiplier_var.set("1")
         self.exit_reason_var.set("TP")
+        self.scenario_var.set("Strong")
+        self.comment_var.set("")
         self.take_profit_label.config(text="--")
         self.lot_size_label.config(text="--")
         self.amount_at_risk_label.config(text="--")
@@ -512,6 +553,10 @@ Average USD/Trade:     ${avg_usd:+.2f}
         trade = self.trades[index]
         
         if messagebox.askyesno("Confirm", "Are you sure you want to delete this trade?"):
+            # Reverse account balance change for this trade
+            self.account_balance -= trade.usd_pl
+            self.account_balance_var.set(str(round(self.account_balance, 2)))
+            
             # Delete from database
             if self.db.is_connected():
                 self.db.delete_trade(trade.date)

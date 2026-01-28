@@ -25,6 +25,8 @@ class Trade:
     status: str  # "Win" or "Loss"
     return_ratio: float
     achieved_multiplier: float
+    scenario: str = "Strong"   # "Low", "Medium", "Strong"
+    comment: str = ""
     
     def to_dict(self) -> dict:
         """Convert trade to dictionary"""
@@ -44,12 +46,17 @@ class Trade:
             "usd_pl": self.usd_pl,
             "status": self.status,
             "return_ratio": self.return_ratio,
-            "achieved_multiplier": self.achieved_multiplier
+            "achieved_multiplier": self.achieved_multiplier,
+            "scenario": self.scenario,
+            "comment": self.comment,
         }
     
     @classmethod
     def from_dict(cls, data: dict) -> 'Trade':
-        """Create trade from dictionary"""
+        """Create trade from dictionary (supports legacy docs without scenario/comment)"""
+        data = dict(data)
+        data.setdefault("scenario", "Strong")
+        data.setdefault("comment", "")
         return cls(**data)
 
 
