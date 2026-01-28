@@ -90,8 +90,10 @@ class TradingJournal:
         
         ttk.Label(top_frame, text="Strategy:").grid(row=0, column=0, padx=(6, PAD_L), pady=3, sticky=tk.W)
         self.strategy_var = tk.StringVar(value=self.strategies[0])
-        self.strategy_combo = ttk.Combobox(top_frame, textvariable=self.strategy_var,
-                                          values=self.strategies, width=18, state="readonly")
+        self.strategy_combo = ttk.Combobox(
+            top_frame, textvariable=self.strategy_var,
+            values=self.strategies, width=18, state="readonly"
+        )
         self.strategy_combo.grid(row=0, column=1, padx=(PAD_R, 6), pady=3)
         self.strategy_combo.bind('<<ComboboxSelected>>', self.on_strategy_change)
         
@@ -177,8 +179,10 @@ class TradingJournal:
         # Row 3: Scenario (2 cols), Comment (6 cols) — same total 8 columns
         ttk.Label(input_frame, text="Scenario:").grid(row=2, column=0, padx=pad, pady=2, sticky=st)
         self.scenario_var = tk.StringVar(value="Strong")
-        scenario_combo = ttk.Combobox(input_frame, textvariable=self.scenario_var,
-                                     values=["Low", "Medium", "Strong"], state="readonly")
+        scenario_combo = ttk.Combobox(
+            input_frame, textvariable=self.scenario_var,
+            values=["Low", "Medium", "Strong"], state="readonly"
+        )
         scenario_combo.grid(row=2, column=1, padx=pad, pady=2, sticky=st)
         
         ttk.Label(input_frame, text="Comment:").grid(row=2, column=2, padx=pad, pady=2, sticky=st)
@@ -210,8 +214,10 @@ class TradingJournal:
         quick_add_button = ttk.Button(quick_input_frame, text="Add", command=self.process_quick_input)
         quick_add_button.grid(row=0, column=1, padx=4, pady=3)
         
-        ttk.Label(quick_input_frame, text="Example: 2000.50 1.0 1995.00 2.0 TP",
-                 font=("Arial", 8), foreground="gray").grid(row=1, column=0, columnspan=2, pady=1, sticky=tk.W)
+        ttk.Label(
+            quick_input_frame, text="Example: 2000.50 1.0 1995.00 2.0 TP",
+            font=("Arial", 8), foreground="gray"
+        ).grid(row=1, column=0, columnspan=2, pady=1, sticky=tk.W)
     
     def _setup_table_frame(self, parent):
         """Setup table frame"""
@@ -221,8 +227,11 @@ class TradingJournal:
         table_frame.rowconfigure(0, weight=1)
         parent.rowconfigure(3, weight=1)
         
-        columns = ("Date", "Strategy", "Scenario", "Entry", "TP", "SL", "Multiplier", "Lot Size", "Risk %", "Risk Amount",
-                  "Exit Reason", "Pips", "USD P/L", "Status", "Return Ratio", "Comment")
+        columns = (
+            "Date", "Strategy", "Scenario", "Entry", "TP", "SL", "Multiplier",
+            "Lot Size", "Risk %", "Risk Amount", "Exit Reason", "Pips",
+            "USD P/L", "Status", "Return Ratio", "Comment"
+        )
         
         column_widths = {
             "Date": 120, "Strategy": 90, "Scenario": 70, "Entry": 80, "TP": 80, "SL": 80,
